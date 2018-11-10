@@ -5,7 +5,6 @@
 #include <fstream>
 
 
-// In case Koplo uses shitty mac standards again
 #ifdef WIN32
 #define popen _popen
 #define pclose _pclose
@@ -43,6 +42,14 @@ void initGPUArray3D(Real** arr, int x, int y, int z)
 	cudaError_t cudaStatus = cudaMalloc((void**)arr, sizeof(Real)*x*y*z);
 	if (cudaStatus != cudaSuccess)
 		std::cout << "cudaMalloc failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+}
+
+typename<T>
+void cpuReadbackArray(T array, Real* device_array)
+{
+	cudaError_t cudaStatus = cudaMemcpy(array.data(), device_array, array.size(), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess)
+		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
 }
 
 // CUDA kernel functions
@@ -381,26 +388,11 @@ void LBMSimulationGPU::cpuReadback()
 	f.init(Nx, Ny, Q);
 	tau_ap.init(Nx, Ny);
 
-	cudaError_t cudaStatus;
-	cudaStatus = cudaMemcpy(rho.data(), d_rho, rho.size(), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(ux.data(), d_ux, rho.size(), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(uy.data(), d_uy, rho.size(), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(f.data(), d_f_post, f.size(), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(tau_ap.data(), d_tau_ap, tau_ap.size(), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+	cpuReadbackArray(rho, d_rho);
+	cpuReadbackArray(ux, d_ux);
+	cpuReadbackArray(uy, d_uy);
+	cpuReadbackArray(f, d_f);
+	cpuReadbackArray(tau_ap, d_tau_ap);
 }
 
 void LBMSimulationGPU::volumetric()
