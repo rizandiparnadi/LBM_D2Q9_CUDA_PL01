@@ -45,6 +45,22 @@ void initGPUArray3D(Real** arr, int x, int y, int z)
 }
 
 typename<T>
+void copyToDevice(__constant_ T deviceVariable, T* data, int size)
+{
+	cudaError_t cudaStatus = cudaMemcpy(deviceVariable, data, size, cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess)
+		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+}
+
+typename<T>
+void copyToDeviceSymbol(__constant_ T deviceVariable, T* data, int size)
+{
+	cudaError_t cudaStatus = cudaMemcpyToSymbol(deviceVariable, data, size);
+	if (cudaStatus != cudaSuccess)
+		std::cout << "cudaMemcpyToSymbol failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+}
+
+typename<T>
 void cpuReadbackArray(T array, Real* device_array)
 {
 	cudaError_t cudaStatus = cudaMemcpy(array.data(), device_array, array.size(), cudaMemcpyDeviceToHost);
@@ -95,39 +111,19 @@ void LBMSimulationGPU::initialize(LBMSimulationParameters params)
 	initGPUArray(&d_rho0, 1);
 	initGPUArray(&d_uw, 1);
 
-	cudaError_t cudaStatus;
-	cudaStatus = cudaMemcpy(d_tau, &tau, sizeof(Real), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(d_rho0, &rho0, sizeof(Real), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpy(d_uw, &uw, sizeof(Real), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpy failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+	copyToDevice(d_tau, &tau, sizeof(Real));
+	copyToDevice(d_rho0, &rho0, sizeof(Real));
+	copyToDevice(d_uw, &uw, sizeof(Real));
 
 	int _cx[9] = { 0, 1, 0, -1, 0, 1, -1, -1, 1 };
 	int _cy[9] = { 0, 0, 1, 0, -1, 1, 1, -1, -1 };
 	Real _w[9] = { 4.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0 };
 	int _N[2] = { Nx, Ny };
 
-	cudaStatus = cudaMemcpyToSymbol(cx, &_cx[0], sizeof(int) * 9);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpyToSymbol failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpyToSymbol(cy, &_cy[0], sizeof(int) * 9);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpyToSymbol failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpyToSymbol(w, &_w[0], sizeof(Real) * 9);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpyToSymbol failed :" << cudaGetErrorName(cudaStatus) << std::endl;
-
-	cudaStatus = cudaMemcpyToSymbol(N, &_N[0], sizeof(int) * 2);
-	if (cudaStatus != cudaSuccess)
-		std::cout << "cudaMemcpyToSymbol failed :" << cudaGetErrorName(cudaStatus) << std::endl;
+	copyToDeviceSymbol(cx, &_cx[0], sizeof(int) * 9);
+	copyToDeviceSymbol(cy, &_cy[0], sizeof(int) * 9);
+	copyToDeviceSymbol(w, &_w[0], sizeof(Real) * 9);
+	copyToDeviceSymbol(N, &_N[0], sizeof(int) * 2);
 
 	// Assign a 3D distribution of CUDA "threads" within each CUDA "block"    
 	int threadsAlongX = 16, threadsAlongY = 16;
