@@ -70,6 +70,9 @@ public:
 	Real feq(Real rho, Real ux, Real uy, int k); // Equilibrium distribution function
 
 protected:
+	typename<T>
+	void cpuReadbackArray(T array, Real* device_array);
+	
 	dim3 dimBlock, dimGrid;
 
 	///////// GPU-side variables
