@@ -69,10 +69,15 @@ public:
 
 	Real feq(Real rho, Real ux, Real uy, int k); // Equilibrium distribution function
 
-protected:
+private:
+	typename<T>
+	void copyToDevice(__constant_ T deviceVariable, T* data, int size);
+	typename<T>
+	void copyToDeviceSymbol(__constant_ T deviceVariable, T* data, int size);
 	typename<T>
 	void cpuReadbackArray(T array, Real* device_array);
 	
+protected
 	dim3 dimBlock, dimGrid;
 
 	///////// GPU-side variables
